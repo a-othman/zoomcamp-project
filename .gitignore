@@ -1,6 +1,15 @@
+__pycache__/
 .DS_Store
 .ipynb_checkpoints
 kaggle.json
 *.csv
 ssh
 *.pem
+*.zip
+.env
+archive/
+cleaned_data/
+concatenated_data/
+db_experiment/
+test.py
+test.ipynb

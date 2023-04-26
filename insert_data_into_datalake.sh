@@ -12,4 +12,3 @@ aws s3 cp 2019-Nov.csv s3://zoomcamp
 aws s3 cp 2019-Oct.csv s3://zoomcamp
 aws s3 cp nov-sample.csv s3://zoomcamp
 aws s3 cp oct-sample.csv s3://zoomcamp
-
