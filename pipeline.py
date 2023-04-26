@@ -45,14 +45,14 @@ def concat_data(sample=True):
         print(f'total data size is: {result.count()}')
         print('Finished Concatenation.')
         # os.system("rm -r data/") #remove csv files
-        result.write.format("csv")\
+        result.write.format("parquet")\
             .option("mode", "overwrite")\
-            .save(" ") #create csv file for the combined data
+            .save("concatenated_data") #create csv file for the combined data
     print("Finished Concatentaning the Data")        
 @task
 def clean_data():
     with SparkSession.builder.master("local[*]").appName("zoomcamp_project").getOrCreate() as spark:
-        concatenated_data= spark.read.schema(get_spark_table_schema()).csv("./concatenated_data/")
+        concatenated_data= spark.read.schema(get_spark_table_schema()).parquet("./concatenated_data/")
         print('Before droping nulls: ', concatenated_data.count())
         concatenated_data= concatenated_data.na.drop(subset=["event_time"])
         print('After droping nulls: ', concatenated_data.count())
