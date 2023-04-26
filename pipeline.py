@@ -51,7 +51,8 @@ def concat_data(sample=True):
     print("Finished Concatentaning the Data")        
 @task
 def clean_data():
-    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").getOrCreate() as spark:
+    os.system("mkdir temp")
+    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").config("spark.local.dir", f"{os.getcwd()}/temp").getOrCreate() as spark:
         concatenated_data= spark.read.schema(get_spark_table_schema()).parquet("./concatenated_data/")
         print('Before droping nulls: ', concatenated_data.count())
         concatenated_data= concatenated_data.na.drop(subset=["event_time"])
@@ -87,8 +88,8 @@ def insert_data_into_db():
 
 @flow(name='main flow')
 def run_flow():
-    download_data(download=True)
-    concat_data(sample=False)
+    # download_data(download=True)
+    concat_data(sample=True)
     clean_data()
     insert_data_indo_datalake(unzipped=False)
     insert_data_into_db()
