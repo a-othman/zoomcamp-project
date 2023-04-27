@@ -66,12 +66,12 @@ def clean_data():
         print('Finished Data Cleaning!')
 
 @task
-def insert_data_indo_datalake(unzipped=False):
+def insert_data_indo_datalake(bucket_name= "zoomcamp_project", unzipped=False):
     if unzipped:
-            os.system("aws s3 cp 2019-Nov.csv s3://zoomcamp/original_data/")
-            os.system("aws s3 cp 2019-Oct.csv s3://zoomcamp/original_data/")
-    os.system("aws s3 cp ecommerce-behavior-data-from-multi-category-store.zip s3://zoomcamp/original_data/")
-    os.system("aws s3 cp cleaned_data/ s3://zoomcamp/cleaned_data/ --recursive")
+            os.system(f"aws s3 cp data/2019-Nov.csv s3://{bucket_name}/original_data/")
+            os.system(f"aws s3 cp data/2019-Oct.csv s3://{bucket_name}/original_data/")
+    os.system(f"aws s3 cp ecommerce-behavior-data-from-multi-category-store.zip s3://{bucket_name}/original_data/")
+    os.system(f"aws s3 cp cleaned_data/ s3://{bucket_name}/cleaned_data/ --recursive")
     print("Finished Inserting Data into S3 bucket")
 @task
 def insert_data_into_db():
@@ -88,8 +88,8 @@ def insert_data_into_db():
 
 @flow(name='main flow')
 def run_flow():
-    # download_data(download=True)
-    concat_data(sample=True)
+    download_data(download=True)
+    concat_data(sample=False)
     clean_data()
     insert_data_indo_datalake(unzipped=False)
     insert_data_into_db()
