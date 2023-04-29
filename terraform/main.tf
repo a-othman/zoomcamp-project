@@ -94,20 +94,33 @@ resource "aws_iam_role_policy" "s3_access" {
 }
 
 
+# Create a security group that allows access to db
+resource "aws_security_group" "db_security_group" {
+  name_prefix = "db_security_group"
+  ingress {
+    from_port = 5432
+    to_port = 5432
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
+# Create a PostgreSQL database instance
+resource "aws_db_instance" "zoomcamp_db" {
+  allocated_storage    = 20
+  engine               = "postgres"
+  engine_version       = "13.4"
+  instance_class       = "db.t4g.micro"
+  db_name              = "zoomcamp_db"
+  username             = "othman"
+  password             = "mysecretpassword"
+  parameter_group_name  = "default.postgres13"
+  skip_final_snapshot  = true
+  vpc_security_group_ids = [aws_security_group.db_security_group.id]
+  # Make the database publicly accessible
+  publicly_accessible = true
+}
 
-
-
-# # Create a PostgreSQL database instance
-# resource "aws_db_instance" "zoomcamp_db" {
-#   allocated_storage    = 20
-#   engine               = "postgres"
-#   engine_version       = "13.4"
-#   instance_class       = "db.t4g.micro"
-#   db_name                 = "zoomcamp_db"
-#   username             = "othman"
-#   password             = "mysecretpassword"
-#   parameter_group_name  = "default.postgres13"
-#   skip_final_snapshot  = true
-#   # vpc_security_group_ids = [aws_security_group.ssh_access.id]
-# }
+output "database_endpoint" {
+  value = aws_db_instance.zoomcamp_db.endpoint
+}
