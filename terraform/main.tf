@@ -36,6 +36,7 @@ resource "aws_instance" "zoomcamp_ec2" {
 
 resource "aws_s3_bucket" "zoomcamp-project" {
   bucket = "zoomcamp-project"
+  force_destroy= true
 }
 
 
