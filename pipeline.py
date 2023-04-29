@@ -66,7 +66,7 @@ def clean_data():
         print('Finished Data Cleaning!')
 
 @task
-def insert_data_indo_datalake(bucket_name= "zoomcamp_project", unzipped=False):
+def insert_data_indo_datalake(bucket_name= "zoomcamp-project", unzipped=False):
     if unzipped:
             os.system(f"aws s3 cp data/2019-Nov.csv s3://{bucket_name}/original_data/")
             os.system(f"aws s3 cp data/2019-Oct.csv s3://{bucket_name}/original_data/")
