@@ -73,17 +73,39 @@ def insert_data_indo_datalake(bucket_name= "zoomcamp-project", unzipped=False):
     os.system(f"aws s3 cp ecommerce-behavior-data-from-multi-category-store.zip s3://{bucket_name}/original_data/")
     os.system(f"aws s3 cp cleaned_data/ s3://{bucket_name}/cleaned_data/ --recursive")
     print("Finished Inserting Data into S3 bucket")
+
+
+# @task
+# def insert_data_into_db():
+#     create_table()
+#     files= glob('cleaned_data/*.parquet')
+#     for f in files:
+#         print(f)
+#         df= pd.read_parquet(f)
+#         print(df.head())
+#         connection= create_engine(f'postgresql://{getenv("username")}:{getenv("password")}@{getenv("host")}:{getenv("port")}/{getenv("database")}')
+#         df.to_sql(name="events", con= connection, if_exists="append", index=False, chunksize=int(10e5))
+#     print("Finished Inserting Data into Database")
+
 @task
-def insert_data_into_db():
-    create_table()
-    files= glob('cleaned_data/*.parquet')
-    for f in files:
-        print(f)
-        df= pd.read_parquet(f)
-        print(df.head())
-        connection= create_engine(f'postgresql://{getenv("username")}:{getenv("password")}@{getenv("host")}:{getenv("port")}/{getenv("database")}')
-        df.to_sql(name="events", con= connection, if_exists="append", index=False, chunksize=int(10e5))
-    print("Finished Inserting Data into Database")
+def insert_data_into_db(clean_data_path="./cleaned_data/"):
+    clean_data_files= os.listdir(clean_data_path)
+    clean_data_files= [str(os.getcwd())+'/cleaned_data/'+i for i in clean_data_files]
+    i=1
+    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").getOrCreate() as spark:
+        for file in clean_data_files:
+            df= spark.read.option('header', True).schema(get_spark_table_schema()).parquet(file)
+            df.write \
+            .format("jdbc") \
+            .option("url", f"jdbc:postgresql://{getenv('host')}:{getenv('port')}/{getenv('database')}") \
+            .option("dbtable", "events") \
+            .option("user", getenv("username")) \
+            .option("password", getenv("password")) \
+            .option("driver", "org.postgresql.Driver") \
+            .mode("append")\
+            .save()
+            print(f"Finished insertion {i}/{len(clean_data_files)}")
+            i+=1
 
 
 @flow(name='main flow')
