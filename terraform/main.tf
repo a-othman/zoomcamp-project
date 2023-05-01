@@ -21,15 +21,23 @@ resource "aws_security_group" "ssh_access" {
 
 # Launch an EC2 instance with 50 GB additional storage
 resource "aws_instance" "zoomcamp_ec2" {
-  ami = "ami-02396cdd13e9a1257" # Replace with your desired AMI ID
+  ami = "ami-02396cdd13e9a1257"
   instance_type = "t3.xlarge"
   # instance_type = "t2.micro"
+
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo yum -y install git
+              wget https://jdbc.postgresql.org/download/postgresql-42.6.0.jar
+              git clone https://github.com/a-othman/zoomcamp-project.git
+              EOF
 
   key_name = "zoomcamp" # Replace with your SSH key name, make sure you have created one with same name
   vpc_security_group_ids = [aws_security_group.ssh_access.id]
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
   root_block_device {
     volume_size = 100 # Replace with your desired root volume size
+    # volume_size = 20
   }
 
 }
