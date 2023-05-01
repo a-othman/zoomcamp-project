@@ -15,8 +15,12 @@ The data contains the following columns:
 I did a batch job on the data using pyspark, cleaned the dataset, drop the duplicates, and the nulls and did transformations on the dataset to find the distributions of users actions, and daily sales during these two months.
 I have used tableau public to create the dashboard representing these final visualizations.
 ### Visualizations:
-    Tableau Dashboard URL: 
-
+     
+    ![I have created two tiles:
+    - The first one is a bar chart showing the count of each event users did while shopping. 
+    - The second is a time series data showing total daily sales customers.]
+    (https://github.com/a-othman/zoomcamp-project/blob/main/dashboard.png))
+image.png
 
 ### How to run the project: 
 - Step 1:create the infra structure on aws using three commands: terraform init, terraform plan, terraform apply
