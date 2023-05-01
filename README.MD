@@ -19,8 +19,8 @@ I have used tableau public to create the dashboard representing these final visu
     ![I have created two tiles:
     - The first one is a bar chart showing the count of each event users did while shopping. 
     - The second is a time series data showing total daily sales customers.]
-    (https://github.com/a-othman/zoomcamp-project/blob/main/dashboard.png))
-image.png
+    ![dashboard](https://user-images.githubusercontent.com/60391825/235533671-8df15d03-45b7-4a8c-befe-3e3aad1f0d96.png)
+
 
 ### How to run the project: 
 - Step 1:create the infra structure on aws using three commands: terraform init, terraform plan, terraform apply
