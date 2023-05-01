@@ -47,10 +47,13 @@ def create_table():
         ) PARTITION BY RANGE (event_time);
 
         CREATE TABLE IF NOT EXISTS events_oct_2019 PARTITION OF events
-        FOR VALUES FROM ('2019-10-01') TO ('2019-10-31');
+        FOR VALUES FROM ('2019-10-01') TO ('2019-11-01');
         
         CREATE TABLE IF NOT EXISTS event_nov_2019 PARTITION OF events
-        FOR VALUES FROM ('2019-11-01') TO ('2019-11-30');
+        FOR VALUES FROM ('2019-11-01') TO ('2019-12-01');
+
+        CREATE TABLE IF NOT EXISTS events_default PARTITION OF events DEFAULT;
+
         """)
         connection.commit()
         print('Success!')
