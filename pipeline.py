@@ -3,15 +3,13 @@ from os import getenv
 import pandas as pd
 from sqlalchemy import create_engine
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StringType, IntegerType, FloatType, TimestampType
-from pyspark.sql import DataFrameWriter
+from pyspark.sql.functions import col, to_date, count
+from pyspark.sql.functions import sum as _sum
 from prefect import flow , task
-from helper import create_table, get_spark_table_schema
-from glob import glob
+from helper import create_table, get_spark_table_schema, create_staging_schema
 
 @task(name='Download Data')
 def download_data(download=False, source="mkechinov/ecommerce-behavior-data-from-multi-category-store"):
-    
     os.system("mkdir samples")
     if download:
         os.system("mkdir data")
@@ -25,10 +23,10 @@ def download_data(download=False, source="mkechinov/ecommerce-behavior-data-from
     print('Finished Downloading Data')   
 
 @task(name='Concat Data')
-def concat_data(sample=True):
+def clean_data(sample=True):
     print('Reading Data...')
-    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").getOrCreate() as spark:
-        if sample:
+    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").config("spark.local.dir", f"{os.getcwd()}/temp").getOrCreate() as spark:
+        if sample: #used this for testing purposes
             oct = spark.read.option('header', True).schema(get_spark_table_schema()).csv("samples/nov-sample.csv")
             print('Read Oct')
             nov = spark.read.option('header', True).schema(get_spark_table_schema()).csv("samples/oct-sample.csv")
@@ -40,30 +38,30 @@ def concat_data(sample=True):
             print('Read Nov')
         print('Concatentating Data...')
         print(f'Oct data size is: {oct.count()}\n Nov data size is: {nov.count()}')
-        result= oct.union(nov)
-        print('Schema: ', result.printSchema())
-        print(f'total data size is: {result.count()}')
+        concatenated_data= oct.union(nov)
+        print('Schema: ', concatenated_data.printSchema())
+        print(f'total data size is: {concatenated_data.count()}')
         print('Finished Concatenation.')
-        # os.system("rm -r data/") #remove csv files
-        result.write.format("parquet")\
-            .option("mode", "overwrite")\
-            .save("concatenated_data") #create csv file for the combined data
-    print("Finished Concatentaning the Data")        
-@task
-def clean_data():
-    os.system("mkdir temp")
-    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").config("spark.local.dir", f"{os.getcwd()}/temp").getOrCreate() as spark:
-        concatenated_data= spark.read.schema(get_spark_table_schema()).parquet("./concatenated_data/")
-        print('Before droping nulls: ', concatenated_data.count())
-        concatenated_data= concatenated_data.na.drop(subset=["event_time"])
-        print('After droping nulls: ', concatenated_data.count())
-        print("Combined Data Schema: ", concatenated_data.printSchema())
-        print('Before droping duplicates: ', concatenated_data.count())
+        concatenated_data= concatenated_data.na.drop(subset=["event_time"]) #droping nulls
         concatenated_data= concatenated_data.distinct() #drop duplicates
-        print('After droping duplicates: ', concatenated_data.count())
-        concatenated_data.repartition(20)\
-            .write.option("mode", "overwrite").parquet('cleaned_data')
-        print('Finished Data Cleaning!')
+        concatenated_data= concatenated_data.withColumn('date', to_date(col('event_time'))) #partitioning by date
+        concatenated_data.repartition(20).write.option("header", "True")\
+            .partitionBy("date")\
+            .mode('overwrite')\
+            .parquet('cleaned_data')
+    print("Finished Cleaning the Data")        
+
+@task
+def transform(cleaned_data_path='./cleaned_data'):
+    with SparkSession.builder.master("local[*]").appName("zoomcamp_project").config("spark.local.dir", f"{os.getcwd()}/temp").getOrCreate() as spark:
+        # processing data for first visualization tile: user actions grouped
+        df= spark.read.schema(get_spark_table_schema()).parquet(cleaned_data_path) 
+        actions_type_count = df.groupBy('event_type').agg(count('*').alias('No of Events'))
+        actions_type_count.write.option('header', True).mode('overwrite').csv('./actions_type_count')
+        # processing data for second visualization tile: daily sales 
+        sales_df= df.filter(col("event_type")=='purchase')
+        daily_sales= sales_df.groupBy('date').agg(_sum('price').alias('Total Sales'))
+        daily_sales.write.option('header', True).mode('overwrite').csv('./daily_sales')
 
 @task
 def insert_data_indo_datalake(bucket_name= "zoomcamp-project", unzipped=False):
@@ -75,24 +73,15 @@ def insert_data_indo_datalake(bucket_name= "zoomcamp-project", unzipped=False):
     print("Finished Inserting Data into S3 bucket")
 
 
-# @task
-# def insert_data_into_db():
-#     create_table()
-#     files= glob('cleaned_data/*.parquet')
-#     for f in files:
-#         print(f)
-#         df= pd.read_parquet(f)
-#         print(df.head())
-#         connection= create_engine(f'postgresql://{getenv("username")}:{getenv("password")}@{getenv("host")}:{getenv("port")}/{getenv("database")}')
-#         df.to_sql(name="events", con= connection, if_exists="append", index=False, chunksize=int(10e5))
-#     print("Finished Inserting Data into Database")
-
 @task
 def insert_data_into_db(clean_data_path="./cleaned_data/"):
+    create_staging_schema()
+    create_table()
     clean_data_files= os.listdir(clean_data_path)
     clean_data_files= [str(os.getcwd())+'/cleaned_data/'+i for i in clean_data_files]
     i=1
     with SparkSession.builder.master("local[*]").appName("zoomcamp_project").getOrCreate() as spark:
+        # raw data after cleaning
         for file in clean_data_files:
             df= spark.read.option('header', True).schema(get_spark_table_schema()).parquet(file)
             df.write \
@@ -106,14 +95,36 @@ def insert_data_into_db(clean_data_path="./cleaned_data/"):
             .save()
             print(f"Finished insertion {i}/{len(clean_data_files)}")
             i+=1
-
+        # transformed data table 1
+        df= spark.read.option('header', True).csv("actions_type_count")
+        df.write \
+            .format("jdbc") \
+            .option("url", f"jdbc:postgresql://{getenv('host')}:{getenv('port')}/{getenv('database')}") \
+            .option("dbtable", "staging.actions_type_count") \
+            .option("user", getenv("username")) \
+            .option("password", getenv("password")) \
+            .option("driver", "org.postgresql.Driver") \
+            .mode("overwrite")\
+            .save()
+        # transformed data table 2
+        df= spark.read.option('header', True).csv("./daily_sales")
+        df.write \
+            .format("jdbc") \
+            .option("url", f"jdbc:postgresql://{getenv('host')}:{getenv('port')}/{getenv('database')}") \
+            .option("dbtable", "staging.daily_sales") \
+            .option("user", getenv("username")) \
+            .option("password", getenv("password")) \
+            .option("driver", "org.postgresql.Driver") \
+            .mode("overwrite")\
+            .save()
+        
 
 @flow(name='main flow')
 def run_flow():
-    download_data(download=True)
-    concat_data(sample=False)
-    clean_data()
-    insert_data_indo_datalake(unzipped=False)
+    # download_data(download=True)
+    clean_data(sample=False)
+    # insert_data_indo_datalake(unzipped=False)
+    transform()
     insert_data_into_db()
     
 

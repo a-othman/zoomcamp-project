@@ -13,6 +13,20 @@ def get_spark_table_schema():
             .add("user_id", IntegerType(), True)\
             .add("user_session", StringType(), True)
     return schema
+def create_staging_schema():
+    try:
+        connection= psycopg2.connect(host=getenv("host"), port=getenv("port"), database=getenv('database'),
+                                    user=getenv("username"), password=getenv("password"))
+        
+        cur= connection.cursor()
+        cur.execute("""create schema IF NOT EXISTS staging""")
+        connection.commit()
+    finally:
+        cur.close()
+        connection.close()
+        print('Connection Closed!')
+    print('Finished Schema Creation!!')
+
 def create_table():
     try:
         connection= psycopg2.connect(host=getenv("host"), port=getenv("port"), database=getenv('database'),
@@ -44,7 +58,7 @@ def create_table():
         cur.close()
         connection.close()
         print('Connection Closed!')
-    print('Finished!!')
+    print('Finished Table Creation!!')
 
 
 if __name__=="__main__":
