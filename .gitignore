@@ -13,3 +13,4 @@ concatenated_data/
 db_experiment/
 test.py
 test.ipynb
+terraform/.terraform
