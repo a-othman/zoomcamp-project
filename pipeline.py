@@ -121,9 +121,9 @@ def insert_data_into_db(clean_data_path="./cleaned_data/"):
 
 @flow(name='main flow')
 def run_flow():
-    # download_data(download=True)
+    download_data(download=True)
     clean_data(sample=False)
-    # insert_data_indo_datalake(unzipped=False)
+    insert_data_indo_datalake(unzipped=True)
     transform()
     insert_data_into_db()
     
