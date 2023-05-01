@@ -3,6 +3,10 @@ curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.11.4.zip" -o "awscl
 unzip awscliv2.zip
 sudo ./aws/install
 
+# create kaggle dir
+mkdir ~/.kaggle
+touch ~/.kaggle/kaggle.json
+
 # add POSTGRES JDBC jar file
 wget -P /home/ec2-user/.local/lib/python3.9/site-packages/pyspark/jars/ https://jdbc.postgresql.org/download/postgresql-42.6.0.jar 
 # create json to add kaggle token inside
