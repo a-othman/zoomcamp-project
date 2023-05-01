@@ -28,8 +28,6 @@ resource "aws_instance" "zoomcamp_ec2" {
   user_data = <<-EOF
               #!/bin/bash
               sudo yum -y install git
-              wget https://jdbc.postgresql.org/download/postgresql-42.6.0.jar
-              git clone https://github.com/a-othman/zoomcamp-project.git
               EOF
 
   key_name = "zoomcamp" # Replace with your SSH key name, make sure you have created one with same name
